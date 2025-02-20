@@ -4,7 +4,7 @@ import random
 class C(BaseConstants):
     NAME_IN_URL = 'accountability_game'
     PLAYERS_PER_GROUP = 3  # Incumbent, Voter, Challenger
-    NUM_ROUNDS = 2  # Two-period game
+    NUM_ROUNDS = 2   # The number of rounds
     SHOCK_PROB = 0.5  # Probability of shock e = 1
     GOOD_TYPE_PROB = 0.5  # Probability that a politician is of good type
     RENT = 10  # Office rent for politicians
