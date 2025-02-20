@@ -119,9 +119,7 @@ def pages():
 
 page_sequence = [
     Introduction,
-    Send,
-    SendBackWaitPage,
-    SendBack,
-    ResultsWaitPage,
-    Results,
+    decision,
+    election,
+    result
 ]
