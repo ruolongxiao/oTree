@@ -7,7 +7,9 @@ class C(BaseConstants):
     NUM_ROUNDS = 2  # Two-period game
     SHOCK_PROB = 0.5  # Probability of shock e = 1
     GOOD_TYPE_PROB = 0.5  # Probability that a politician is of good type
-    
+    RENT = 10  # Office rent for politicians
+    COST = 6  # Policy cost for politicians
+
 class Subsession(BaseSubsession):
     pass
 
