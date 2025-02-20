@@ -22,7 +22,7 @@ class Player(BasePlayer):
     role_choice = models.IntegerField(choices=[0, 1], label="Choose Action (0: Low Effort, 1: High Effort)")
     voter_decision = models.BooleanField(blank=True, label="Reelect the Incumbent?")
     payoff = models.CurrencyField()
-    good_type = models.BooleanField()  # True if politician is of good type
+    type = models.BooleanField()  # True if politician is of good type
     
     def role(self):
         if self.id_in_group == 1:
@@ -38,7 +38,7 @@ def set_shock(group: Group):
 def assign_types(players):
     for player in players:
         if player.role() in ['Incumbent', 'Challenger']:
-            player.good_type = random.random() < C.GOOD_TYPE_PROB
+            player.type = random.random() < C.GOOD_TYPE_PROB
 
 def set_policy_outcome(group: Group):
     players = group.get_players()
