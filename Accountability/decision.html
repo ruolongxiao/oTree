@@ -1,14 +1,14 @@
 {% block content %}
     <h2>Policy Decision</h2>
     {% if player.role == "Incumbent" and round_number == 1 %}
-        <p>Your type is congruent. As the incumbent, you observe the shock: {{ shock }}</p>
-        <p>Choose your effort level:</p>
+        <p>Your type is {{ type }}. As the incumbent, you observe the shock: {{ shock }}</p>
+        <p>Choose your effort level: </p>
     {% elif player.role == "Challenger" and round_number == 2 and not group.reelected %}
-        <p>As the newly elected officeholder, you will now set the policy for the second term.</p>
-        <p>Choose your effort level:</p>
+        <p>Your type is {{ type }}, you will now set the policy for the second term.</p>
+        <p>Choose your effort level: </p>
     {% elif player.role == "Incumbent" and round_number == 2 and group.reelected %}
         <p>As the reelected incumbent, you will now set the policy for the second term.</p>
-        <p>Choose your effort level:</p>
+        <p>Choose your effort level: </p>
     {% endif %}
     {{ formfields }}
     <button type="submit">Submit</button>
