@@ -1,0 +1,8 @@
+{% block content %}
+    <h2>Results</h2>
+    <p>The policy outcome in the first term was: {{ group.policy_outcome }}</p>
+    {% if round_number == 2 %}
+        <p>The policy outcome in the second term was: {{ group.second_term_policy_outcome }}</p>
+    {% endif %}
+    <p>Your final payoff: {{ player.payoff }}</p>
+{% endblock %}
