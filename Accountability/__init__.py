@@ -1,110 +1,108 @@
 from otree.api import *
-
-
-
-
-doc = """
-This is a standard 2-player trust game where the amount sent by player 1 gets
-tripled. The trust game was first proposed by
-<a href="http://econweb.ucsd.edu/~jandreon/Econ264/papers/Berg%20et%20al%20GEB%201995.pdf" target="_blank">
-    Berg, Dickhaut, and McCabe (1995)
-</a>.
-"""
-
+import random
 
 class C(BaseConstants):
-    NAME_IN_URL = 'trust'
-    PLAYERS_PER_GROUP = 2
-    NUM_ROUNDS = 1
-    # Initial amount allocated to each player
-    ENDOWMENT = cu(100)
-    MULTIPLIER = 3
-
-
+    NAME_IN_URL = 'accountability_game'
+    PLAYERS_PER_GROUP = 3  # Incumbent, Voter, Challenger
+    NUM_ROUNDS = 2  # Two-period game
+    SHOCK_PROB = 0.5  # Probability of shock e = 1
+    GOOD_TYPE_PROB = 0.5  # Probability that a politician is of good type
+    
 class Subsession(BaseSubsession):
     pass
 
-
 class Group(BaseGroup):
-    sent_amount = models.CurrencyField(
-        min=0,
-        max=C.ENDOWMENT,
-        doc="""Amount sent by P1""",
-        label="Please enter an amount from 0 to 100:",
-    )
-    sent_back_amount = models.CurrencyField(doc="""Amount sent back by P2""", min=cu(0))
-
-
+    reelected = models.BooleanField(initial=True)  # Track if incumbent is reelected
+    shock = models.BooleanField()  # Stochastic shock e = 0 or 1
+    policy_outcome = models.IntegerField()  # Observed outcome = effort + shock
+    
 class Player(BasePlayer):
-    pass
+    role_choice = models.IntegerField(choices=[0, 1], label="Choose Action (0: Low Effort, 1: High Effort)")
+    voter_decision = models.BooleanField(blank=True, label="Reelect the Incumbent?")
+    payoff = models.CurrencyField()
+    good_type = models.BooleanField()  # True if politician is of good type
+    
+    def role(self):
+        if self.id_in_group == 1:
+           return 'Incumbent'
+        elif self.id_in_group == 2:
+           return 'Voter'
+        else:
+           return 'Challenger'
 
+def set_shock(group: Group):
+    group.shock = random.random() < C.SHOCK_PROB
 
-# FUNCTIONS
-def sent_back_amount_max(group: Group):
-    return group.sent_amount * C.MULTIPLIER
+def assign_types(players):
+    for player in players:
+        if player.role() in ['Incumbent', 'Challenger']:
+            player.good_type = random.random() < C.GOOD_TYPE_PROB
 
+def set_policy_outcome(group: Group):
+    players = group.get_players()
+    incumbent = players[0]
+    effort = incumbent.role_choice
+    group.policy_outcome = effort + int(group.shock)
 
 def set_payoffs(group: Group):
-    p1 = group.get_player_by_id(1)
-    p2 = group.get_player_by_id(2)
-    p1.payoff = C.ENDOWMENT - group.sent_amount + group.sent_back_amount
-    p2.payoff = group.sent_amount * C.MULTIPLIER - group.sent_back_amount
+    players = group.get_players()
+    incumbent = players[0]
+    voter = players[1]
+    challenger = players[2]
+    
+    if group.reelected:
+        politician = incumbent
+    else:
+        politician = challenger
+    
+    effort = politician.role_choice
+    
+    if politician.good_type:
+        politician.payoff = 10 * effort  # Good type benefits from effort
+    else:
+        politician.payoff = 5  # Bad type does not benefit from effort
+    
+    voter.payoff = 10 + 5 * group.policy_outcome  # Payoff depends on observed policy outcome
 
+def set_voter_decision(group: Group):
+    voter = group.get_players()[1]
+    group.reelected = voter.voter_decision
 
-# PAGES
-class Introduction(Page):
-    pass
+class Decision(Page):
+    form_model = 'player'
+    form_fields = ['role_choice']
+    
+    def is_displayed(self):
+        return self.player.role() in ['Incumbent', 'Challenger']
+    
+    def vars_for_template(self):
+        return {'shock': self.group.shock}  # Show shock to the incumbent
 
-
-class Send(Page):
-    """This page is only for P1
-    P1 sends amount (all, some, or none) to P2
-    This amount is tripled by experimenter,
-    i.e if sent amount by P1 is 5, amount received by P2 is 15"""
-
-    form_model = 'group'
-    form_fields = ['sent_amount']
-
-    @staticmethod
-    def is_displayed(player: Player):
-        return player.id_in_group == 1
-
-
-class SendBackWaitPage(WaitPage):
-    pass
-
-
-class SendBack(Page):
-    """This page is only for P2
-    P2 sends back some amount (of the tripled amount received) to P1"""
-
-    form_model = 'group'
-    form_fields = ['sent_back_amount']
-
-    @staticmethod
-    def is_displayed(player: Player):
-        return player.id_in_group == 2
-
-    @staticmethod
-    def vars_for_template(player: Player):
-        group = player.group
-
-        tripled_amount = group.sent_amount * C.MULTIPLIER
-        return dict(tripled_amount=tripled_amount)
-
-
-class ResultsWaitPage(WaitPage):
-    after_all_players_arrive = set_payoffs
-
+class Voting(Page):
+    form_model = 'player'
+    form_fields = ['voter_decision']
+    
+    def is_displayed(self):
+        return self.player.role() == 'Voter'
+    
+    def vars_for_template(self):
+        return {'policy_outcome': self.group.policy_outcome}  # Voter observes policy outcome
+    
+    def before_next_page(self):
+        set_voter_decision(self.group)
 
 class Results(Page):
-    """This page displays the earnings of each player"""
+    def before_next_page(self):
+        set_payoffs(self.group)
 
-    @staticmethod
-    def vars_for_template(player: Player):
-        group = player.group
+def before_session_starts(subsession: Subsession):
+    for group in subsession.get_groups():
+        set_shock(group)
+        assign_types(group.get_players())
+        set_policy_outcome(group)
 
-        return dict(tripled_amount=group.sent_amount * C.MULTIPLIER)
+def pages():
+    return [Decision, Voting, Results]
 
 
 page_sequence = [
